@@ -44,7 +44,6 @@ def read_yaml_from_url(url):
     """
     Downloads a YAML file from a URL and returns the parsed YAML data.
     """
-    headers = {'User-Agent': 'Mozilla/5.0'}
     response = requests.get(url, headers=HEADERS)
     response.raise_for_status()
     yaml_data = yaml.safe_load(response.text)
@@ -55,17 +54,17 @@ def read_list_from_url(url):
     Downloads a .list file (or generic text/csv) from a URL and parses
     it into a DataFrame. Also handles special “AND” logical rules.
     """
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        csv_data = StringIO(response.text)
-        df = pd.read_csv(
-            csv_data,
-            header=None,
-            names=['pattern', 'address', 'other', 'other2', 'other3'],
-            on_bad_lines='skip'
-        )
-    else:
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code != 200:
         return None
+
+    csv_data = StringIO(response.text)
+    df = pd.read_csv(
+        csv_data,
+        header=None,
+        names=['pattern', 'address', 'other', 'other2', 'other3'],
+        on_bad_lines='skip'
+    )
 
     filtered_rows = []
     rules = []
@@ -251,36 +250,28 @@ def parse_list_file(link, output_directory):
 
         return file_name
     except Exception as e:
-        print(f'Error fetching link, skipped: {link}, reason: {str(e)}')
+        print(f'Error fetching link, skipped: {link} , reason: {str(e)}')
         return None
 
 def get_list_files_from_github(owner, repo, path="rule/QuantumultX"):
     """
     Recursively fetch all *.list file links from a GitHub repository folder.
-    
-    :param owner: GitHub username or org name, e.g., 'proother'
-    :param repo:  GitHub repo name, e.g., 'ios_rule_script'
-    :param path:  Subfolder path in the repo to crawl, e.g., 'rule/QuantumultX'
-    :return:      A list of RAW file URLs pointing to each .list file
     """
     base_api_url = f"https://api.github.com/repos/{owner}/{repo}/contents"
     url = f"{base_api_url}/{path}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code != 200:
-        print(f"Warning: Could not access {url}. HTTP {response.status_code}")
+        print(f"Warning: Could not access {url} . HTTP {response.status_code}")
         return []
 
     contents = response.json()
     results = []
 
-    # contents is a list of dicts, each dict can be a file or a directory
     for item in contents:
         if item["type"] == "dir":
-            # Recurse into the subdirectory
             subdir_results = get_list_files_from_github(owner, repo, item["path"])
             results.extend(subdir_results)
         elif item["type"] == "file" and item["name"].endswith(".list"):
-            # Construct a RAW GitHub link
             raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/master/{item['path']}"
             results.append(raw_url)
 
