@@ -8,6 +8,11 @@ import ipaddress
 from io import StringIO
 import requests
 
+
+token = os.environ.get("GITHUB_TOKEN", "")
+if token:
+    headers["Authorization"] = f"Bearer {token}"
+
 # Mapping dictionary to unify different rule patterns into consistent keys.
 MAP_DICT = {
     'DOMAIN-SUFFIX': 'domain_suffix',
