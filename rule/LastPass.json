@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "domain_suffix": [
+        "lastpass.com"
+      ]
+    }
+  ],
+  "version": 1
+}
