@@ -8,10 +8,14 @@ import ipaddress
 from io import StringIO
 import requests
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "application/vnd.github.v3+json"
+}
 
 token = os.environ.get("GITHUB_TOKEN", "")
 if token:
-    headers["Authorization"] = f"Bearer {token}"
+    HEADERS["Authorization"] = f"Bearer {token}"
 
 # Mapping dictionary to unify different rule patterns into consistent keys.
 MAP_DICT = {
@@ -41,7 +45,7 @@ def read_yaml_from_url(url):
     Downloads a YAML file from a URL and returns the parsed YAML data.
     """
     headers = {'User-Agent': 'Mozilla/5.0'}
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=HEADERS)
     response.raise_for_status()
     yaml_data = yaml.safe_load(response.text)
     return yaml_data
@@ -51,7 +55,6 @@ def read_list_from_url(url):
     Downloads a .list file (or generic text/csv) from a URL and parses
     it into a DataFrame. Also handles special “AND” logical rules.
     """
-    headers = {'User-Agent': 'Mozilla/5.0'}
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         csv_data = StringIO(response.text)
@@ -262,12 +265,7 @@ def get_list_files_from_github(owner, repo, path="rule/QuantumultX"):
     """
     base_api_url = f"https://api.github.com/repos/{owner}/{repo}/contents"
     url = f"{base_api_url}/{path}"
-    headers = {
-        "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=HEADERS)
     if response.status_code != 200:
         print(f"Warning: Could not access {url}. HTTP {response.status_code}")
         return []
