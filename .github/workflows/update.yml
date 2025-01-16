@@ -21,24 +21,25 @@ jobs:
     - name: Fetch latest sing-box release
       id: fetch-release
       run: |
-        # Fetch the latest release data
         LATEST_RELEASE=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest)
-        # Extract the download URL for the Linux amd64 .deb package
         SING_BOX_DEB_URL=$(echo $LATEST_RELEASE | jq -r '.assets[] | select(.name | endswith("linux_amd64.deb")) | .browser_download_url')
-        # Check if the URL is empty
-        if [ -z "$SING_BOX_DEB_URL" ]; then
-          echo "Latest sing-box .deb package not found."
+        SING_BOX_DEB_SHA256=$(echo $LATEST_RELEASE | jq -r '.assets[] | select(.name | endswith("linux_amd64.deb")) | .sha256')
+        if [ -z "$SING_BOX_DEB_URL" ] || [ -z "$SING_BOX_DEB_SHA256" ]; then
+          echo "Latest sing-box .deb package or its checksum not found."
           exit 1
         fi
-        # Set the output for use in other steps
-        echo "::set-output name=deb_url::$SING_BOX_DEB_URL"
+        echo "deb_url=$SING_BOX_DEB_URL" >> $GITHUB_OUTPUT
+        echo "deb_sha256=$SING_BOX_DEB_SHA256" >> $GITHUB_OUTPUT
     - name: "Setup sing-box"
       env:
         SING_BOX_DEB_URL: ${{ steps.fetch-release.outputs.deb_url }}
+        SING_BOX_DEB_SHA256: ${{ steps.fetch-release.outputs.deb_sha256 }}
       run: |
         set -Eeuo pipefail
-        wget -O sing-box.deb "$SING_BOX_DEB_URL"
-        sudo dpkg -i sing-box.deb
+        echo "Downloading sing-box from $SING_BOX_DEB_URL"
+        wget -O sing-box.deb "$SING_BOX_DEB_URL" || { echo "Download failed"; exit 1; }
+        echo "$SING_BOX_DEB_SHA256  sing-box.deb" | sha256sum -c || { echo "Checksum verification failed"; exit 1; }
+        sudo dpkg -i sing-box.deb || { echo "Installation failed"; exit 1; }
         rm sing-box.deb
 
     - name: Set up Python3
